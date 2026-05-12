@@ -6,7 +6,31 @@
 - No emojis in commits, issues, PR comments, or code
 - No fluff or cheerful filler text
 - Technical prose only, be kind but direct (e.g., "Thanks @user" not "Thanks so much @user!")
+- Answer the user's questions in Chinese, and do not translate computer-specific technical terms
 
+## Code Style
+- The generated code segment must be annotated with a comment indicating that it is AI-generated, The comment style is as follows:
+- Additionally, replace MODEL-NAME and THINKING-LEVEL in the square brackets with the actual model name and reasoning level currently in use.
+### Scala/C/verilog/system verilog
+```
+// AI[MODEL-NAME, THINKING-LEVEL] GENERATED BEGIN
+code segment
+// AI GENERATED END
+```
+for example:
+```
+// AI[DeepSeek V4 Pro, high] GENERATED BEGIN
+code segment
+// AI GENERATED END
+```
+- A complete generated code file must include comments at the top header. The comment style is as follows:
+```
+// This file is AI[MODEL-NAME, THINKING-LEVEL]-generated and manually verified.
+```
+for example:
+```
+// This file is AI[DeepSeek V4 Pro, high]-generated and manually verified.
+```
 ## Code Quality
 
 - No `any` types unless absolutely necessary
