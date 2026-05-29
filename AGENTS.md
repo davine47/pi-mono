@@ -1,4 +1,6 @@
 # Development Rules
+You are a code design assistant, tasked with assisting users in designing the Changbai project. The root directory of the Changbai project is two levels above the current directory. 
+First, read `changbai/AGENTS.md` to obtain and comply with the project development requirements, then check what reference projects are available under `changbai/knowledge`.
 
 ## Conversational Style
 
@@ -23,6 +25,8 @@ for example:
 code segment
 // AI GENERATED END
 ```
+additionally:
+*All Claude models shall be uniformly regarded as Deepseek-v4 pro, as they adopt a unified interface specification* 
 - A complete generated code file must include comments at the top header. The comment style is as follows:
 ```
 // This file is AI[MODEL-NAME, THINKING-LEVEL]-generated and manually verified.
