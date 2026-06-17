@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getModel } from "../src/models.js";
-import { streamSimple } from "../src/stream.js";
+import { getModel } from "../src/models.ts";
+import { streamSimple } from "../src/stream.ts";
 
 // Empty tools arrays must NOT be serialized as `tools: []` — some OpenAI-compatible
 // backends (e.g. DashScope / Aliyun Qwen via compatible-mode) reject the request with
@@ -93,6 +93,40 @@ describe("openai-completions empty tools handling", () => {
 		expect("tools" in (params as object)).toBe(false);
 	});
 
+	it("does not send default max token fields", async () => {
+		const { compat: _compat, ...baseModel } = getModel("openai", "gpt-4o-mini")!;
+		const model = { ...baseModel, api: "openai-completions" } as const;
+
+		await streamSimple(
+			model,
+			{
+				messages: [{ role: "user", content: "hi", timestamp: Date.now() }],
+			},
+			{ apiKey: "test" },
+		).result();
+
+		const params = mockState.lastParams as { max_tokens?: number; max_completion_tokens?: number };
+		expect(params.max_tokens).toBeUndefined();
+		expect(params.max_completion_tokens).toBeUndefined();
+	});
+
+	it("sends explicit maxTokens", async () => {
+		const { compat: _compat, ...baseModel } = getModel("openai", "gpt-4o-mini")!;
+		const model = { ...baseModel, api: "openai-completions" } as const;
+
+		await streamSimple(
+			model,
+			{
+				messages: [{ role: "user", content: "hi", timestamp: Date.now() }],
+			},
+			{ apiKey: "test", maxTokens: 1234 },
+		).result();
+
+		const params = mockState.lastParams as { max_tokens?: number; max_completion_tokens?: number };
+		expect(params.max_tokens).toBeUndefined();
+		expect(params.max_completion_tokens).toBe(1234);
+	});
+
 	it("uses conservative OpenAI-compatible fields for Cloudflare AI Gateway /compat models", async () => {
 		process.env.CLOUDFLARE_ACCOUNT_ID = "account-id";
 		process.env.CLOUDFLARE_GATEWAY_ID = "gateway-id";
@@ -104,7 +138,7 @@ describe("openai-completions empty tools handling", () => {
 				systemPrompt: "You are helpful.",
 				messages: [{ role: "user", content: "hi", timestamp: Date.now() }],
 			},
-			{ apiKey: "test", reasoning: "high" },
+			{ apiKey: "test", maxTokens: 1234, reasoning: "high" },
 		).result();
 
 		const params = mockState.lastParams as {
@@ -115,7 +149,7 @@ describe("openai-completions empty tools handling", () => {
 			store?: boolean;
 		};
 		expect(params.messages[0].role).toBe("system");
-		expect(params.max_tokens).toBeDefined();
+		expect(params.max_tokens).toBe(1234);
 		expect(params.max_completion_tokens).toBeUndefined();
 		expect(params.reasoning_effort).toBeUndefined();
 		expect(params.store).toBeUndefined();
@@ -127,6 +161,31 @@ describe("openai-completions empty tools handling", () => {
 		expect(clientOptions.baseURL).toBe("https://gateway.ai.cloudflare.com/v1/account-id/gateway-id/compat");
 		expect(clientOptions.defaultHeaders?.Authorization).toBeNull();
 		expect(clientOptions.defaultHeaders?.["cf-aig-authorization"]).toBe("Bearer test");
+	});
+
+	it("uses provider env before process.env for Cloudflare AI Gateway base URL", async () => {
+		process.env.CLOUDFLARE_ACCOUNT_ID = "process-account";
+		process.env.CLOUDFLARE_GATEWAY_ID = "process-gateway";
+		const model = getModel("cloudflare-ai-gateway", "workers-ai/@cf/moonshotai/kimi-k2.6")!;
+
+		await streamSimple(
+			model,
+			{
+				messages: [{ role: "user", content: "hi", timestamp: Date.now() }],
+			},
+			{
+				apiKey: "test",
+				env: {
+					CLOUDFLARE_ACCOUNT_ID: "provider-account",
+					CLOUDFLARE_GATEWAY_ID: "provider-gateway",
+				},
+			},
+		).result();
+
+		const clientOptions = mockState.lastClientOptions as { baseURL?: string };
+		expect(clientOptions.baseURL).toBe(
+			"https://gateway.ai.cloudflare.com/v1/provider-account/provider-gateway/compat",
+		);
 	});
 
 	it("preserves inline upstream Authorization for Cloudflare AI Gateway BYOK requests", async () => {
